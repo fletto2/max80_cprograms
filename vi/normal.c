@@ -561,6 +561,15 @@ do_e_cmd:
 	for (n = DEFAULT1(Prenum); n > 0; n--) {
 	    LPtr           *pos;
 
+#ifdef MAX80
+	    /* end_word stays on a word's last character, so each word
+	       after the first starts one past it: 3e and c2w */
+	    if (n != DEFAULT1(Prenum) && inc(Curschar) == -1) {
+		CLEAROP;
+		beep();
+		break;
+	    }
+#endif
 	    if ((pos = end_word(Curschar, type)) == NULL) {
 		CLEAROP;
 		beep();
@@ -925,7 +934,11 @@ docsearch:
 		    beginline(TRUE);
 	    }
 	    mtype = flag ? MLINE : MCHAR;
+#ifdef MAX80
+	    mincl = FALSE;	/* ` is exclusive, as vi's: d`a stops before it */
+#else
 	    mincl = TRUE;	/* ignored if not MCHAR */
+#endif
 	    set_want_col = TRUE;
 	}
 	break;
