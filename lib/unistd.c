@@ -73,6 +73,8 @@ ssize_t read(int n, void *buf, size_t len) __LIB
 
 	if (!f)
 		return -1;
+	if (len > 32767)	/* the count must fit an int */
+		len = 32767;
 	if (!(f->flags & F_CON))
 		return fread(buf, 1, len, f);
 	/* the console gives one line at most, as a terminal does */
@@ -90,6 +92,8 @@ ssize_t write(int n, const void *buf, size_t len) __LIB
 {
 	FILE *f = fd(n);
 
+	if (len > 32767)
+		len = 32767;
 	return f ? (ssize_t)fwrite(buf, 1, len, f) : -1;
 }
 

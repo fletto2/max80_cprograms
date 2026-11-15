@@ -15,6 +15,7 @@
 	.globl	___heap
 	.globl	_cpmargs
 	.globl	_cpmargc
+	.globl	___coninit
 
 	; The order of the areas, so the linker lays them out so. The
 	; Makefile links twice, the second time with _INITIALIZED where
@@ -62,6 +63,7 @@ start:	ld	sp,(6)
 	inc	de
 	ldir
 2$:	call	gsinit
+	call	___coninit		; stdin, stdout and stderr
 	call	_cpmargs		; DE = argv, from the command tail
 	ld	hl,(_cpmargc)		; sdcccall(1): argc in HL, and
 					; argv in DE, from cpmargs

@@ -27,7 +27,7 @@ static int geti(void)
 	return v;
 }
 
-static unsigned char lng;
+static unsigned char lng, hs;	/* l and h counted */
 
 /* a long, or the low half of a long long, whose high half is passed
  * over: it took the next argument's place before */
@@ -123,16 +123,18 @@ int __vfmt(void (*out)(char, void *), void *arg, const char *fmt, va_list ap)
 			fmt++;
 			prec = getnum();
 		}
-		lng = 0;
+		lng = hs = 0;
 		while (*fmt == 'l' || *fmt == 'h' || *fmt == 'z' || *fmt == 't')
-			if (*fmt++ == 'l')
-				lng++;	/* 2: long long, 8 bytes */
+			if (*fmt == 'l')
+				fmt++, lng++;	/* 2: long long, 8 bytes */
+			else if (*fmt++ == 'h')
+				hs++;	/* 2: hh, a char */
 		c = *fmt;
 		pre[0] = 0;
 		switch (c) {
 		case 'd':
 		case 'i':
-			u = lng ? getl() : (long)geti();
+			u = lng ? getl() : hs > 1 ? (long)(signed char)geti() : (long)geti();
 			if ((long)u < 0) {
 				u = -u;
 				pre[0] = '-';
@@ -154,7 +156,7 @@ int __vfmt(void (*out)(char, void *), void *arg, const char *fmt, va_list ap)
 		case 'u':
 		case 'x':
 		case 'X':
-			u = lng ? (unsigned long)getl() : (unsigned int)geti();
+			u = lng ? (unsigned long)getl() : hs > 1 ? (unsigned char)geti() : (unsigned int)geti();
 			base = c == 'o' ? 8 : c == 'u' ? 10 : 16;
 			if ((fl & FL_ALT) && base == 16 && u) {
 				pre[0] = '0';
@@ -175,7 +177,15 @@ int __vfmt(void (*out)(char, void *), void *arg, const char *fmt, va_list ap)
 			field("", 0, s, len, width, fl & FL_LEFT);
 			continue;
 		case 'n':
-			*(int *)geti() = count;
+			s = (char *)geti();
+			if (lng) {
+				*(long *)s = count;
+				if (lng > 1)	/* long long: the high half 0 */
+					*(long *)(s + 4) = 0;
+			} else if (hs > 1)
+				*s = count;
+			else
+				*(int *)s = count;
 			continue;
 		case 'e':
 		case 'E':
@@ -203,7 +213,7 @@ int __vfmt(void (*out)(char, void *), void *arg, const char *fmt, va_list ap)
 			*--s = '0';
 		len = tmp + sizeof(tmp) - s;
 		zeros = prec > len ? prec - len : 0;
-		if ((fl & FL_ALT) && base == 8 && !zeros && *s != '0')
+		if ((fl & FL_ALT) && base == 8 && !zeros && (!len || *s != '0'))
 			zeros = 1;
 		if (prec < 0 && (fl & (FL_ZERO | FL_LEFT)) == FL_ZERO) {
 			int w = width - len;

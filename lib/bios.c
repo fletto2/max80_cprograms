@@ -5,7 +5,7 @@
 #include <cpm.h>
 #include "cpmint.h"
 
-unsigned int __bios22(unsigned char n, unsigned int bc, unsigned int de);
+unsigned int __bios22(unsigned char n, unsigned int bc, unsigned int de) __LIB;
 
 /* Under CP/M 3, and xcpmz80, through function 50, which maps the BIOS
  * in. Under CP/M 2.2 straight to the jump table. */

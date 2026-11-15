@@ -204,6 +204,44 @@ static void i290(void)
 static int initd = 1234;	/* initialized data, copied by crt0 */
 static int zero;		/* zeroed by crt0 */
 
+/* bsearch by address only: the elements are never read */
+static int acmp(const void *k, const void *e)
+{
+	return (unsigned int)k < (unsigned int)e ? -1 : (unsigned int)k > (unsigned int)e;
+}
+
+/* printf's hh, %n by its size, %#.0o, %.Ns on bytes with no 0,
+ * scanf's %n, cpm_findfirst with no match, bsearch past 32767 */
+static void i314(void)
+{
+	char b[24], nm[16], u[3];
+	struct { long l; char g; } ln;
+	struct { char c, g; } hn;
+	int n1, n2;
+	char *found;
+
+	sprintf(b, "%hhd %hhu %hhx", 300, 300, -1);
+	say("hh [%s]\n", b);
+	ln.l = -1; ln.g = 'L';
+	hn.c = 9; hn.g = 'G';
+	sprintf(b, "ab%lncd%hhn", &ln.l, &hn.c);
+	say("n %ld %c %d %c\n", ln.l, ln.g, hn.c, hn.g);
+	sprintf(b, "[%#.0o] [%#o]", 0, 8);
+	say("oct %s\n", b);
+	u[0] = 'x'; u[1] = 'y'; u[2] = 'z';	/* no 0 after them */
+	sprintf(b, "%.2s|%.*s|%.0s", u, 1, u + 2, u);
+	say("prec [%s]\n", b);
+	ln.l = -1; ln.g = 'L';
+	hn.c = 9; hn.g = 'G';
+	sscanf("12 34", "%d%ln %d%hhn", &n1, &ln.l, &n2, &hn.c);
+	say("scann %ld %c %d %c\n", ln.l, ln.g, hn.c, hn.g);
+	strcpy(nm, "keep");
+	n1 = cpm_findfirst("NOSUCH.XYZ", nm);
+	say("nomatch %d %s\n", n1, nm);
+	found = bsearch((void *)(0x100 + 39000u), (void *)0x100, 40000u, 1, acmp);
+	say("bsearch40k %s\n", found == (char *)(0x100 + 39000u) ? "found" : "lost");
+}
+
 int main(void)
 {
 	FILE *f;
@@ -493,6 +531,7 @@ int main(void)
 		fclose(f);
 	}
 	i290();
+	i314();
 	n = fullheap();
 	say("full %u\n", n);
 	say("name? ");

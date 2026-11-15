@@ -79,7 +79,8 @@ A file opened with "a" or "a+" starts at its end, a text file at its
 end as C has it.
 
 - `lib/crt0.s`: the start-up of a program linked with `cpm.lib`. Puts the stack under the BDOS, zeroes the
-  uninitialized data, which C needs and CP/M does not give, and calls
+  uninitialized data, which C needs and CP/M does not give, sets up
+  stdin, stdout and stderr (`__coninit`), and calls
   `main(argc, argv)`. argv comes from the command tail, in upper case,
   "quoted words" as one, and `argv[0]` is "". The Makefile links each
   program twice, the second time with the initialized variables where
@@ -117,6 +118,7 @@ every file is smaller without it anyway.
 | Program | Source | What |
 | --- | --- | --- |
 | `test/ctest.c` | ours | CTEST.COM, checks the library, resident |
+| `test/crt0t.c` | ours | CRT0T.COM, crt0 and `cpm.lib` alone, with no CLIB.SYS, for CP/M 2.2 |
 | `advent/` | troglobit's Colossal Cave Adventure, github.com/troglobit/adventure at 7b61687, public domain (`advent/LICENSE`) | ADVENT.COM and ADVENT1.TXT to ADVENT4.TXT |
 | `base64/` | ours, MIT, from agfa9000's BASE64 v2.0, rewritten for the Z80, and its host side `host.c` | BASE64.COM, and `build/base64_host` for Linux |
 | `zork/` | MojoZork by Ryan C. Gordon, zlib license (`zork/LICENSE.txt`), the copy in agfa9000's CP/M-68K port, altered | ZORK.COM, which plays Infocom's version 3 stories |

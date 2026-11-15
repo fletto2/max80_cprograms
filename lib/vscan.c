@@ -103,8 +103,15 @@ int __vscan(int (*get)(void *), void (*unget)(int, void *), void *arg,
 			fmt++;
 		}
 		if (*fmt == 'n') {
-			if (!skip)
-				*(int *)getp() = count - 1;
+			if (!skip) {	/* by its size, as the numbers */
+				unsigned char *q = getp();
+				if (size == 4)
+					*(long *)q = count - 1;
+				else if (size == 1)
+					*q = count - 1;
+				else
+					*(int *)q = count - 1;
+			}
 			continue;
 		}
 		if (*fmt != 'c' && *fmt != '[')

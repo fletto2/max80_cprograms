@@ -188,8 +188,8 @@
 172	cpm_setdrive	v i
 173	cpm_getuser	v
 174	cpm_setuser	v i
-175	cpm_findfirst	v sd
-176	cpm_findnext	v d
+175	cpm_findfirst	n sd
+176	cpm_findnext	n d
 177	cpm_filesize	v s
 # err and errx are the program's, clibr/side.c, so its atexit
 # functions run; 148 and 149 stay for programs built before

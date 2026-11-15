@@ -242,6 +242,8 @@ int __r_read(int fd, unsigned int p, unsigned int len) __LIB
 	unsigned int got = 0, k;
 	int n;
 
+	if (len > 32767)	/* the count must fit an int */
+		len = 32767;
 	while (got < len) {
 		k = len - got > PIECE ? PIECE : len - got;
 		n = read(fd, tmp, k);
@@ -262,6 +264,8 @@ int __r_write(int fd, unsigned int p, unsigned int len) __LIB
 	unsigned int put = 0, k;
 	int n;
 
+	if (len > 32767)
+		len = 32767;
 	while (put < len) {
 		k = len - put > PIECE ? PIECE : len - put;
 		__uget(tmp, p + put, k);

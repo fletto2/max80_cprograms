@@ -269,30 +269,46 @@ static unsigned char *fmtargs(const char *fmt, unsigned char *a)
 		}
 		while (*fmt >= '0' && *fmt <= '9')
 			fmt++;
-		if (*fmt == '.') {
-			fmt++;
-			if (*fmt == '*') {
-				a += 2;
-				fmt++;
-			}
-			while (*fmt >= '0' && *fmt <= '9')
-				fmt++;
-		}
 		{
-			unsigned char lng = 0;
+			unsigned int prec = 0xffffu;	/* none */
+			unsigned char lng = 0, hs = 0;
+			if (*fmt == '.') {
+				fmt++;
+				prec = 0;
+				if (*fmt == '*') {
+					prec = word(a);	/* negative: none */
+					a += 2;
+					fmt++;
+				}
+				while (*fmt >= '0' && *fmt <= '9')
+					prec = prec * 10 + *fmt++ - '0';
+			}
 			while (*fmt == 'l' || *fmt == 'h' || *fmt == 'z' || *fmt == 't')
-				if (*fmt++ == 'l')
-					lng++;
+				if (*fmt == 'l')
+					fmt++, lng++;
+				else if (*fmt++ == 'h')
+					hs++;
 			switch (*fmt) {
 			case 0:
 				return a;
 			case 's':
-				if (!strarg(0, 0xff, a, 0))
+				/* %.Ns reads no more than N bytes, which need
+				 * not end in a 0 */
+				if (prec < 0x8000u && word(a) && word(a) < 0x8000u) {
+					unsigned int u = word(a), len;
+					struct slot *s;
+					len = ustrnlen(u, prec);
+					if (!(s = copyarg(0, 0xff, a, len + 1, 0)))
+						return NULL;
+					__uget(s->copy, u, len);
+					s->copy[len] = 0;
+				} else if (!strarg(0, 0xff, a, 0))
 					return NULL;
 				a += 2;
 				break;
-			case 'n':
-				if (!copyarg('o', 0xff, a, 2, 0))
+			case 'n':	/* %hhn 1 byte, %ln 4, %lln 8 */
+				if (!copyarg('o', 0xff, a,
+				    lng > 1 ? 8 : lng ? 4 : hs > 1 ? 1 : 2, 0))
 					return NULL;
 				a += 2;
 				break;
@@ -395,7 +411,7 @@ static unsigned char *scanargs(const char *fmt, unsigned char *a)
 				return NULL;
 			break;
 		case 'n':
-			if (!copyarg('o', 0xff, a, 2, 1))
+			if (!copyarg('o', 0xff, a, size, 1))
 				return NULL;
 			break;
 		default:
@@ -654,6 +670,10 @@ void __clib_post(void) __LIB
 			continue;
 		}
 		if (!s->kind || !s->user)
+			continue;
+		/* a string written with no size, by a call that failed, is
+		 * left as it was: gets at EOF, cpm_findfirst with no match */
+		if (s->kind == 'd' && (sig[0] == 'p' ? !r : sig[0] == 'n' && r == 0xFFFFu))
 			continue;
 		switch (s->kind) {
 		case 'S':

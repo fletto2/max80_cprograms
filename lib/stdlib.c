@@ -202,7 +202,7 @@ void *bsearch(const void *key, const void *base, size_t n, size_t size,
 	int r;
 
 	while (lo < hi) {
-		mid = (lo + hi) / 2;
+		mid = lo + (hi - lo) / 2;	/* lo + hi can pass 65535 */
 		r = cmp(key, b + mid * size);
 		if (!r)
 			return (void *)(b + mid * size);

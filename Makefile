@@ -62,7 +62,7 @@ ADV_TXT = $(B)/ADVENT1.TXT $(B)/ADVENT2.TXT $(B)/ADVENT3.TXT $(B)/ADVENT4.TXT
 
 all: $(CLIB_SYS) $(B)/CTEST.COM $(B)/ADVENT.COM $(ADV_TXT) $(B)/BASE64.COM \
 	$(B)/base64_host $(B)/page_host $(Z80HOST) $(B)/ZORK.COM \
-	$(B)/EMACS.COM $(B)/VI.COM
+	$(B)/EMACS.COM $(B)/VI.COM $(B)/CRT0T.COM
 
 $(CRT0): lib/crt0.s
 	@mkdir -p $(B)
@@ -145,6 +145,14 @@ link = $(CC) $(LDFLAGS) -o $(B)/$(1).ihx $(2) && \
 
 $(B)/CTEST.COM: $(CRT0R) $(RLIB) $(B)/ctest.rel
 	$(call link,ctest,$(CRT0R) $(B)/ctest.rel $(RLIB))
+
+# CRT0T.COM: crt0 and cpm.lib on their own, for CP/M 2.2
+$(B)/crt0t.rel: test/crt0t.c include/*.h
+	@mkdir -p $(B)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(B)/CRT0T.COM: $(CRT0) $(CLIB) $(B)/crt0t.rel
+	$(call link,crt0t,$(CRT0) $(B)/crt0t.rel $(CLIB))
 
 # Colossal Cave Adventure, troglobit's, reading its text from disk
 $(B)/adv/%.rel: advent/%.c advent/*.h include/*.h
