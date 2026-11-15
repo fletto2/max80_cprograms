@@ -433,6 +433,10 @@ delline(int nlines)
 	if (Topchar->linep == Curschar->linep)
 	    Topchar->linep = q;
 
+#ifdef MAX80
+	if (Curschar->linep == uline)	/* U's line goes */
+	    uline = NULL;
+#endif
 	FREE_S(Curschar->linep);
 	free((char *) (Curschar->linep));
 

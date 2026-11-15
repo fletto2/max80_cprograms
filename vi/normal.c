@@ -90,6 +90,140 @@ static int      opnum = 0;
  * Execute a command in normal mode. 
  */
 
+#ifdef MAX80
+/* The undo of << is what it takes away, put back; of >> a << */
+#define UNDOSHIFT	(operator == RSHIFT)
+
+/* How many of a line's first characters << takes: blanks up to a
+   shiftwidth, 8 columns, a tab running to the next multiple of 8 */
+static int
+shiftlen(char *s)
+{
+    int             col = 0, i = 0;
+
+    while (col < 8 && (s[i] == ' ' || s[i] == TAB)) {
+	col = s[i] == TAB ? (col / 8 + 1) * 8 : col + 1;
+	i++;
+    }
+    return i;
+}
+
+/* The undo of a <<: on each line, what it is about to take away put
+   back at the line's start */
+static void
+lshift_undo(void)
+{
+    LPtr            top, bot;
+    LINE           *l;
+    char            b[9];
+    int             k, first = TRUE;
+
+    top = startop;
+    bot = *Curschar;
+    if (lt(&bot, &top))
+	pswap(top, bot);
+    top.index = 0;
+    AppendPositionToUndobuff(0, RowNumber(&top));
+    for (l = top.linep;; l = l->next) {
+	if (!first)
+	    AppendToUndobuff("j");
+	first = FALSE;
+	if ((k = shiftlen(l->s)) > 0) {
+	    memcpy(b, l->s, k);
+	    b[k] = NUL;
+	    AppendToUndobuff("0i");
+	    AppendToUndobuff(b);
+	    AppendToUndobuff(ESC_STR);
+	}
+	if (l == bot.linep || l->next == NULL)
+	    break;
+    }
+}
+#else
+#define UNDOSHIFT	TRUE
+#endif
+
+#ifdef MAX80
+/* U: the line the cursor came to last, its number and its text then */
+LINE           *uline;
+static lineno_t unum;
+static char    *usave;
+
+/* A copy of the line the cursor has come to, for U */
+static void
+utrack(void)
+{
+    LINE           *l = Curschar->linep;
+
+    if (l == uline && l->num == unum)
+	return;
+    if (usave != NULL)
+	free(usave);
+    AllocQuiet = TRUE;
+    usave = alloc((unsigned) strlen(l->s) + 1);
+    AllocQuiet = FALSE;
+    uline = NULL;
+    if (usave != NULL) {
+	strcpy(usave, l->s);
+	uline = l;
+	unum = l->num;
+    }
+}
+
+/* U: the line back as it was when the cursor came to it, and the
+   changes back again on a second U, as vi's */
+static void
+uline_swap(void)
+{
+    char           *keep;
+    int             need, n;
+
+    if (uline == NULL || Curschar->linep != uline || uline->num != unum) {
+	beep();
+	return;
+    }
+    need = strlen(usave) - strlen(uline->s);
+    AllocQuiet = TRUE;
+    keep = alloc((unsigned) strlen(uline->s) + 1);
+    AllocQuiet = FALSE;
+    if (keep == NULL || (need > 0 && !canincrease(need))) {
+	if (keep != NULL)
+	    free(keep);
+	beep();
+	return;
+    }
+    strcpy(keep, uline->s);
+    strcpy(uline->s, usave);
+    free(usave);
+    usave = keep;
+
+    ResetBuffers();
+    n = RowNumber(Curschar);
+    AppendPositionToUndobuff(0, n);
+    AppendToUndobuff("U");
+    AppendPositionToUndoUndobuff(0, n);
+    AppendToUndoUndobuff("U");
+    Curschar->index = 0;
+    CHANGED;
+    s_refresh(NOT_VALID);
+}
+
+/* After d/ or c/, the pattern and an Enter, so . and the undo of an
+   undo search again */
+static void
+opsearch(char c)
+{
+    char           *pat;
+
+    if ((c != '/' && c != '?') || (pat = lastsearch()) == NULL)
+	return;
+    AppendToRedobuff(pat);
+    AppendToUndoUndobuff(pat);
+    AppendToRedobuff("\r");
+    AppendToUndoUndobuff("\r");
+}
+#endif
+
 void
 normal(char c)
 {
@@ -123,6 +257,8 @@ normal(char c)
     } else
 	opnum = 0;
 #ifdef MAX80
+    if (!finish_op)
+	utrack();
     pgfixed = finish_op;	/* the motion keeps the window */
     pgbig = FALSE;
     pglo = NULL;
@@ -812,6 +948,24 @@ doINSERTcmd:
 
       case '?':
       case '/':
+#ifdef MAX80
+	if (operator != NOP) {	/* d/pat, c?pat, y/pat: the search is the
+				   motion, exclusive as vi's */
+	    LPtr            before;
+
+	    before = *Curschar;
+	    readcmdline(c, (char *) NULL);
+	    if (equal(&before, Curschar)) {	/* not found, or ESC */
+		CLEAROP;
+		break;
+	    }
+	    mtype = MCHAR;
+	    mincl = FALSE;
+	    set_want_col = TRUE;
+	    break;
+	}
+#endif
+	/* FALLTHROUGH */
       case ':':
 	CLEAROP;
 	readcmdline(c, (char *) NULL);
@@ -1119,6 +1273,13 @@ doSHIFTJcommand:
 	    beep();
 	break;
 
+#ifdef MAX80
+      case 'U':
+	CLEAROP;
+	uline_swap();
+	break;
+
+#endif
       case 'u':
       case K_UNDO:
 	CLEAROP;
@@ -1183,24 +1344,33 @@ doSHIFTJcommand:
 	    ResetBuffers();
 
 	    n = RowNumber(&startop);
-	    AppendPositionToUndobuff(startop.index, n);
+	    if (UNDOSHIFT)
+		AppendPositionToUndobuff(startop.index, n);
 	    AppendPositionToUndoUndobuff(startop.index, n);
 	    if (Prenum != 0) {
 		AppendNumberToRedobuff(Prenum);
-		AppendNumberToUndobuff(Prenum);
+		if (UNDOSHIFT)
+		    AppendNumberToUndobuff(Prenum);
 		AppendNumberToUndoUndobuff(Prenum);
 	    }
 	    AppendToRedobuff((operator == LSHIFT) ? "<" : ">");
-	    AppendToUndobuff((operator == LSHIFT) ? ">" : "<");
+	    if (UNDOSHIFT)
+		AppendToUndobuff((operator == LSHIFT) ? ">" : "<");
 	    AppendToUndoUndobuff((operator == LSHIFT) ? "<" : ">");
 	    AppendToRedobuff(mkstr(c));
-	    if (c == '>')
+	    if (!UNDOSHIFT)
+		;
+	    else if (c == '>')
 		AppendToUndobuff("<");
 	    else if (c == '<')
 		AppendToUndobuff(">");
 	    else
 		AppendToUndobuff(mkstr(c));
 	    AppendToUndoUndobuff(mkstr(c));
+#ifdef MAX80
+	    if (operator == LSHIFT)
+		lshift_undo();
+#endif
 
 	    doshift(operator);
 	    break;
@@ -1228,6 +1398,9 @@ doSHIFTJcommand:
 		AppendToRedobuff(mkstr(nchar));
 		AppendToUndoUndobuff(mkstr(nchar));
 	    }
+#ifdef MAX80
+	    opsearch(c);
+#endif
 	    AppendPositionToUndobuff(temp_Curschar.index, n);
 
 	    dodelete(!UndoInProgress, !UndoInProgress, !UndoInProgress);
@@ -1273,6 +1446,9 @@ doSHIFTJcommand:
 		AppendToRedobuff(mkstr(nchar));
 		AppendToUndoUndobuff(mkstr(nchar));
 	    }
+#ifdef MAX80
+	    opsearch(c);
+#endif
 	    dochange();
 
 	    last_command = 'c';
@@ -1302,8 +1478,15 @@ tabinout(int shift_type, int num)
 	if (shift_type == RSHIFT)
 	    inschar(TAB);
 	else {
+#ifdef MAX80
+	    int             k = shiftlen(Curschar->linep->s);
+
+	    while (k-- > 0)
+		delchar(TRUE, FALSE);
+#else
 	    if (gchar(Curschar) == TAB)
 		delchar(TRUE, FALSE);
+#endif
 	}
 	if (num > 0) {
 	    if ((p = nextline(Curschar)) != NULL)

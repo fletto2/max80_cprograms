@@ -372,6 +372,15 @@ dosearch(int dir, char *str)
     }
 }
 
+#ifdef MAX80
+/* The last pattern searched for, or NULL */
+char           *
+lastsearch(void)
+{
+    return laststr;
+}
+#endif
+
 void
 searchagain(int dir)
 {

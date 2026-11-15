@@ -422,6 +422,10 @@ void   doglob(LPtr *,LPtr *,char *);
 #endif
 void   dosub(LPtr *,LPtr *,char *);
 void   searchagain(int);
+#ifdef MAX80
+char  *lastsearch(void);
+extern LINE *uline;
+#endif
 bool_t dosearch(int,char *);
 bool_t repsearch(bool_t);
 bool_t searchc(char,int,int);

@@ -265,6 +265,11 @@ command mode and beep in insert mode. The changes:
   puts in a file that fits in memory, about 2K beside a paged file, and
   one that does not fit is not read at all and leaves the text as it
   was.
+- Added to STEVIE, as vi has them: an operator with a search
+  for its motion (`d/pat`, `c?pat`, `y/pat`, repeated by `.` and undone
+  by `u`), `<<` taking out up to 8 columns of spaces as well as a tab,
+  and `U`, which puts back the last line changed while the cursor
+  stays on it, and is undone by `u` or another `U`.
 - Left out to fit: help, tags (`:ta`, ^], `-t`), several files on the
   command line (`:n`, `:p`, `:rew`), the alternate file (`:e #`, ^^),
   `:g`, `[[` and `]]`, number mode (`:set nu`), `+/pat` on the command
@@ -272,7 +277,7 @@ command mode and beep in insert mode. The changes:
   `:sh` and `:!` say "Not available under CP/M". CP/M gives the command
   tail in upper case, so `+/pat` could not work.
 
-VI.COM is about 46K. A file that fits in its memory is read whole. A
+VI.COM is about 47K. A file that fits in its memory is read whole. A
 bigger one is paged with a window of about 6K, 85 lines of 55
 characters. Each line costs 13 bytes of header
 besides its text. `vpage.s` calls VI's functions and `page.s` with
