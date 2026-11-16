@@ -369,6 +369,9 @@ void   coladvance(LPtr *,int);
 void   stuffReadbuff(char *);
 void   stuffnumReadbuff(int);
 char   vgetc(void);
+#ifdef MAX80
+char   vgetcmd(void);
+#endif
 char   vpeekc(void);
 
 /* mark.c */

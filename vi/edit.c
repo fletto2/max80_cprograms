@@ -52,7 +52,11 @@ edit(void)
 #endif
 	    windgoto(Cursrow, Curscol);
 	}
+#ifdef MAX80
+	c = State == NORMAL ? vgetcmd() : vgetc();
+#else
 	c = vgetc();
+#endif
 
 	if (State == NORMAL) {
 	    /* We're in the normal (non-insert) mode. */

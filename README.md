@@ -272,6 +272,11 @@ command mode and beep in insert mode. The changes:
   by `u`), `<<` taking out up to 8 columns of spaces as well as a tab,
   and `U`, which puts back the last line changed while the cursor
   stays on it, and is undone by `u` or another `U`.
+- Caps Lock, on when xcpmz80 boots, is left as it is, and `max80.c`
+  reads xcpmz80's flag for it (F52Fh). With it on, a command key is
+  taken with its case swapped back, and a `:` command's name in lower
+  case, so `x` and `:wq` work either way. Inserted text, the character
+  after `r`, `f` and `t`, and searches keep Caps Lock.
 - Left out to fit: help, tags (`:ta`, ^], `-t`), several files on the
   command line (`:n`, `:p`, `:rew`), the alternate file (`:e #`, ^^),
   `:g`, `[[` and `]]`, number mode (`:set nu`), `+/pat` on the command

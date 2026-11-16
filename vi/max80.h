@@ -10,6 +10,8 @@
 void flushbuf(void);
 
 int  inchar(void);
+int  capson(void);
+int  capsfix(int);
 int  outchar(char);
 void outstr(char *);
 void toutstr(char *);

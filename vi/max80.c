@@ -125,19 +125,33 @@ beep(void)
 
 /*
  * Caps Lock: xcpmz80 boots with it on, and VI's commands are case
- * sensitive. Off while VI runs, back as it was at the end.
- * KCAPS in src/common.asm, F52Fh: 0 on, 20h off. F1 still flips it.
+ * sensitive. Caps Lock is left as it is, and a command key is read
+ * with its case swapped back while it is on, so x is x with or
+ * without it. Text keeps it. KCAPS in src/common.asm, F52Fh: 0 on,
+ * 20h off. With it on the console swaps the case of a letter, SHIFT
+ * or not.
  */
 #define KCAPS (*(volatile unsigned char *) 0xF52F)
-static unsigned char oldcaps;
+
+int
+capson(void)
+{
+    return KCAPS == 0;
+}
+
+int
+capsfix(int c)
+{
+    if (KCAPS == 0 && ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')))
+	c ^= 0x20;
+    return c;
+}
 
 void
 windinit(void)
 {
     Columns = 80;
     P(P_LI) = Rows = 24;
-    oldcaps = KCAPS;
-    KCAPS = 0x20;
     bdos(45, 0xFF);	/* a disk error returned, not a warm boot, which
 			   would lose the edits and Caps Lock */
 }
@@ -148,7 +162,6 @@ windexit(int r)
     toutstr(T_TP);
     toutstr(T_CV);
     flushbuf();
-    KCAPS = oldcaps;
     bdos(45, 0);
     exit(r);
 }

@@ -439,6 +439,20 @@ stuffnumReadbuff(int n)
     stuffReadbuff(buf);
 }
 
+#ifdef MAX80
+static char     typed;	/* the last vgetc key came from the keyboard */
+
+/* a command key: its case swapped back under Caps Lock, not
+   one from the read buffer, which a command put there */
+char
+vgetcmd(void)
+{
+    char            c = vgetc();
+
+    return typed ? (char) capsfix(c) : c;
+}
+#endif
+
 /* OPTRESULT */
 char
 vgetc(void)
@@ -460,10 +474,16 @@ vgetc(void)
 		shrinkbuf(&Readbuff, &ReadbuffSize);
 #endif
 	    }
+#ifdef MAX80
+	    typed = 0;
+#endif
 	    return (nextc);
 	}
 	c = inchar();
     } while (c == -1);
+#ifdef MAX80
+    typed = 1;
+#endif
 
     return (char) c;
 }

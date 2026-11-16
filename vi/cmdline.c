@@ -185,6 +185,12 @@ readcmdline(char firstc, char *cmdline)
 	pghi = u_pos.linep;
 #endif
     }
+#ifdef MAX80
+    if (capson())	/* :WQ typed with Caps Lock on is :wq, every
+			   command's name is lower case */
+	for (p = cmd; isalpha(*p); p++)
+	    *p = (char) tolower(*p);
+#endif
     strcpy(cmdbuf, cmd);	/* save the unmodified command */
 
     /* isolate the command and find any argument */

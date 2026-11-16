@@ -16,6 +16,11 @@ segment "normal";
 #endif
 
 #include "stevie.h"
+#ifdef MAX80
+#define VGETCMD() vgetcmd()	/* a command key, Caps Lock undone */
+#else
+#define VGETCMD() vgetc()
+#endif
 
 static void     doshift(int);
 static void     dodelete(bool_t, bool_t, bool_t);
@@ -376,7 +381,7 @@ normal(char c)
       case 'z':
 	CLEAROP;
 	S_CHECK_TOPCHAR_AND_BOTCHAR;
-	switch (vgetc()) {
+	switch (VGETCMD()) {
 	  case NL:		/* put Curschar at top of screen */
 	  case CR:
 	    *Topchar = *Curschar;
@@ -1063,7 +1068,7 @@ docsearch:
 #endif
       case 'm':
 	CLEAROP;
-	if (!setmark(vgetc()))
+	if (!setmark(VGETCMD()))
 	    beep();
 	break;
 
@@ -1075,7 +1080,7 @@ docsearch:
 	S_CHECK_TOPCHAR_AND_BOTCHAR;
 	{
 	    LPtr            mtmp;
-	    LPtr           *mark = getmark(vgetc());
+	    LPtr           *mark = getmark(VGETCMD());
 
 	    if (mark == NULL) {
 		CLEAROP;
@@ -1246,7 +1251,7 @@ doSHIFTJcommand:
 
 #endif
       case 'Z':		/* write, if changed, and exit */
-	if (vgetc() != 'Z') {
+	if (VGETCMD() != 'Z') {
 	    beep();
 	    break;
 	}
@@ -1558,7 +1563,7 @@ dodelete(bool_t redraw, bool_t setup_for_undo, bool_t try_to_yank)
     if (try_to_yank) {
 	if (!doyank()) {
 	    msg("yank buffer exceeded: press <y> to confirm");
-	    if (vgetc() != 'y') {
+	    if (VGETCMD() != 'y') {
 		emsg("delete aborted");
 		*Curschar = startop;
 		return;
